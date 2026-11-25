@@ -16,7 +16,10 @@ import {
 import Navbar from "./components/Navbar";
 import AccountCard from "./components/AccountCard";
 import AddAccountModal from "./components/AddAccountModal";
-
+import TransactionModal from "./components/TransactionModal";
+import TransactionList from "./components/TransactionList";
+import { createTransaction } from "./services/transactionService";
+import type { CreateTransactionPayload } from "./types/transaction.types";
 import type {
   Account,
   CreateAccountPayload,
@@ -47,7 +50,10 @@ function App() {
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [saving, setSaving] = useState(false);
-
+const [showTransactionModal, setShowTransactionModal] = useState(false);
+const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
+const [transactionSaving, setTransactionSaving] = useState(false);
+const [transactionRefreshKey, setTransactionRefreshKey] = useState(0);
   // Fetch accounts from backend
   const fetchAccounts = async () => {
     try {
@@ -139,12 +145,33 @@ function App() {
   };
 
   // Navigate to Transactions page with the selected type
-  const handleTransactionAction = (type: "INCOME" | "EXPENSE") => {
-    setActivePage("Transactions");
+const handleAddTransaction = (account: Account) => {
+  setSelectedAccount(account);
+  setShowTransactionModal(true);
+};
 
-    // The selected transaction type can be used by the Transactions page.
-    sessionStorage.setItem("selectedTransactionType", type);
-  };
+const handleSaveTransaction = async (
+  payload: CreateTransactionPayload
+) => {
+  try {
+    setTransactionSaving(true);
+
+    await createTransaction(payload);
+
+    // Refresh the saved transactions list
+    setTransactionRefreshKey((prev) => prev + 1);
+
+    setShowTransactionModal(false);
+    setSelectedAccount(null);
+
+    alert("Transaction added successfully!");
+  } catch (error) {
+    console.error("Transaction save error:", error);
+    alert("Unable to save transaction. Please try again.");
+  } finally {
+    setTransactionSaving(false);
+  }
+};
 
   return (
     <>
@@ -575,6 +602,37 @@ function App() {
             grid-column: 1 / -1;
           }
         }
+          .account-transaction-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.account-add-transaction-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 12px 15px;
+  border: 1px dashed #159c78;
+  border-radius: 12px;
+  background: #edfaf5;
+  color: #118565;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.account-add-transaction-btn:hover {
+  background: #159c78;
+  color: #ffffff;
+  border-style: solid;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 14px #159c7825;
+}
       `}</style>
 
       <div className="dashboard-app">
@@ -604,21 +662,7 @@ function App() {
                 </div>
 
                 <div className="welcome-actions">
-                  <button
-                    className="dashboard-income-btn"
-                    onClick={() => handleTransactionAction("INCOME")}
-                  >
-                    <TrendingUp size={17} />
-                    Add Income
-                  </button>
-
-                  <button
-                    className="dashboard-expense-btn"
-                    onClick={() => handleTransactionAction("EXPENSE")}
-                  >
-                    <Receipt size={17} />
-                    Add Expense
-                  </button>
+                
 
                   <button
                     className="dashboard-primary-btn"
@@ -748,18 +792,28 @@ function App() {
                     </p>
                   </div>
                 ) : (
-                  <div className="dashboard-accounts-grid">
-                    {allAccounts.map((account) => (
-                      <AccountCard
-                        key={account.bankId}
-                        account={account}
-                        onEdit={handleEditAccount}
-                        onDelete={handleDeleteAccount}
-                      />
-                    ))}
-                  </div>
+        <div className="dashboard-accounts-grid">
+  {allAccounts.map((account) => (
+    <div className="account-transaction-wrapper" key={account.bankId}>
+      <AccountCard
+        account={account}
+        onEdit={handleEditAccount}
+        onDelete={handleDeleteAccount}
+      />
+
+      <button
+        className="account-add-transaction-btn"
+        onClick={() => handleAddTransaction(account)}
+      >
+        <Plus size={16} />
+        Add Transaction
+      </button>
+    </div>
+  ))}
+</div>
                 )}
               </section>
+              <TransactionList refreshKey={transactionRefreshKey} />
             </>
           ) : (
             <div className="dashboard-placeholder">
@@ -805,6 +859,17 @@ function App() {
           onSubmit={handleSaveAccount}
           editingAccount={editingAccount}
         />
+        <TransactionModal
+  isOpen={showTransactionModal}
+  selectedAccount={selectedAccount}
+  onClose={() => {
+    if (!transactionSaving) {
+      setShowTransactionModal(false);
+      setSelectedAccount(null);
+    }
+  }}
+  onSubmit={handleSaveTransaction}
+/>
       </div>
     </>
   );

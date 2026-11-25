@@ -7,7 +7,10 @@ import {
   Pencil,
   Trash2,
   ArrowUpRight,
+  TrendingUp,
+  TrendingDown,
 } from "lucide-react";
+
 import { useState } from "react";
 import type { Account } from "../types/account.types";
 
@@ -15,12 +18,16 @@ interface AccountCardProps {
   account: Account;
   onEdit: (account: Account) => void;
   onDelete: (account: Account) => void;
+  totalIncome?: number;
+  totalExpense?: number;
 }
 
 const AccountCard = ({
   account,
   onEdit,
   onDelete,
+  totalIncome = 0,
+  totalExpense = 0,
 }: AccountCardProps) => {
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -36,14 +43,11 @@ const AccountCard = ({
     switch (account.accountType.toUpperCase()) {
       case "SAVINGS":
         return <Landmark size={23} />;
-
       case "CURRENT":
         return <Wallet size={23} />;
-
       case "CREDIT":
       case "CREDIT_CARD":
         return <CreditCard size={23} />;
-
       default:
         return <Wallet size={23} />;
     }
@@ -53,19 +57,19 @@ const AccountCard = ({
     switch (account.accountType.toUpperCase()) {
       case "SAVINGS":
         return "account-savings";
-
       case "CURRENT":
         return "account-current";
-
       case "CREDIT":
       case "CREDIT_CARD":
         return "account-credit";
-
       default:
         return "account-default";
     }
   };
-
+const currentBalance =
+  Number(account.openingBalance || 0) +
+  Number(totalIncome || 0) -
+  Number(totalExpense || 0);
   return (
     <>
       <style>{`
@@ -195,6 +199,60 @@ const AccountCard = ({
           overflow-wrap: anywhere;
         }
 
+        .ac-balance-label {
+          color: #9ba5b4;
+          font-size: 10px;
+          margin-top: 4px;
+        }
+
+        .ac-transaction-summary {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 10px;
+          margin-top: 19px;
+        }
+
+        .ac-summary-box {
+          min-width: 0;
+          padding: 12px 10px;
+          border-radius: 12px;
+        }
+
+        .ac-summary-box.income {
+          background: #effaf5;
+          border: 1px solid #ddf3e8;
+        }
+
+        .ac-summary-box.expense {
+          background: #fff5f1;
+          border: 1px solid #fce6dc;
+        }
+
+        .ac-summary-label {
+          display: flex;
+          align-items: center;
+          gap: 5px;
+          font-size: 10px;
+          font-weight: 700;
+          margin-bottom: 8px;
+        }
+
+        .ac-summary-box.income .ac-summary-label,
+        .ac-summary-box.income .ac-summary-value {
+          color: #159c78;
+        }
+
+        .ac-summary-box.expense .ac-summary-label,
+        .ac-summary-box.expense .ac-summary-value {
+          color: #d66f55;
+        }
+
+        .ac-summary-value {
+          font-size: 14px;
+          font-weight: 800;
+          overflow-wrap: anywhere;
+        }
+
         .ac-footer {
           border-top: 1px solid #f0f2f6;
           margin-top: 17px;
@@ -234,12 +292,14 @@ const AccountCard = ({
           .ac-balance {
             font-size: 23px;
           }
+
+          .ac-summary-value {
+            font-size: 12px;
+          }
         }
       `}</style>
 
       <div className="ac-card">
-
-        {/* Card Header */}
         <div className="ac-card-top">
           <div className={`ac-icon ${getAccountStyle()}`}>
             {getAccountIcon()}
@@ -254,34 +314,53 @@ const AccountCard = ({
           </button>
         </div>
 
-        {/* Account Details */}
         <span className="ac-type">
           {account.accountType.replaceAll("_", " ")}
         </span>
 
-        <h3 className="ac-name">
-          {account.bankName}
-        </h3>
+        <h3 className="ac-name">{account.bankName}</h3>
 
-        <div className="ac-balance">
-          {formatCurrency(
-            account.openingBalance,
-            account.currency
-          )}
+<div className="ac-balance">
+  {formatCurrency(currentBalance, account.currency)}
+</div>
+
+<div className="ac-balance-label">Current Balance</div>
+
+        {/* Income and Expense Summary */}
+        <div className="ac-transaction-summary">
+          <div className="ac-summary-box income">
+            <div className="ac-summary-label">
+              <TrendingUp size={14} />
+              Income
+            </div>
+
+            <div className="ac-summary-value">
+              {formatCurrency(totalIncome, account.currency)}
+            </div>
+          </div>
+
+          <div className="ac-summary-box expense">
+            <div className="ac-summary-label">
+              <TrendingDown size={14} />
+              Expense
+            </div>
+
+            <div className="ac-summary-value">
+              {formatCurrency(totalExpense, account.currency)}
+            </div>
+          </div>
         </div>
 
-        {/* Footer */}
         <div className="ac-footer">
           <span className="ac-status">
             <span className="ac-status-dot" />
             {account.isActive ? "Active" : "Inactive"}
           </span>
 
-          <span>Opening balance</span>
+          <span>Account Summary</span>
           <ArrowUpRight size={17} />
         </div>
 
-        {/* Actions Menu */}
         {menuOpen && (
           <div className="ac-menu">
             <button
